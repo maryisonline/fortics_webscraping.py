@@ -9,14 +9,24 @@ from selenium.webdriver.common.keys import Keys
 import time
 import os
 import schedule
+import pandas as pd
+from datetime import datetime, timedelta, date
+import calendar
+
+# definindo nome de arquivos e caminhos utilizados
+oldName = 'relatorio-de-tabulacao-'
+newName = 'BASE_FORTICS_ATUAL.xlsx'
+originalName = 'BASE_FORTICS.xlsx'
+download_path = r'C:\Users\Benvista\Downloads'
+final_path = r'C:\Users\Benvista\Desktop\BASES\TABULAÇÃO'
+
+# excluindo antiga extração se existir
+for file in os.listdir(final_path):
+    if file.startswith(newName):
+        antigaBase = os.path.join(final_path, newName)
+        os.remove(antigaBase)
 
 def webscraping():
-
-    oldName = 'initial_file'
-    newName = 'BASE_FORTICS'
-
-    download_path = r'C:\Users\Benvista\Desktop\bases_download'
-    file_path = r'C:\Users\Benvista\Desktop\BASES\TABULAÇÃO'
 
     options = webdriver.ChromeOptions()
     service = Service(ChromeDriverManager().install())
@@ -54,6 +64,71 @@ def webscraping():
     web.execute_script("arguments[0].click()", confirmacao)
     print("Inserido no input a opção: Confirmação")
     
-    wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#reportAttendance > div > div.right.aligned.sixteen.wide.column.adjust-top-4 > button'))).click()
+    botao_pesquisa = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '#reportAttendance > div > div.right.aligned.sixteen.wide.column.adjust-top-4 > button')))
+    web.execute_script("arguments[0].click()", botao_pesquisa)
+    print('Opções inseridas!')
+    time.sleep(60)
+
+    botao_download = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#reportAttendance > div > div.right.aligned.sixteen.wide.column.adjust-top-4 > button.icon.mini.brown.ui.button")))
+    web.execute_script("arguments[0].click()", botao_download)
+    # acima aperta até o botao de exportar
+    wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#navbar > aside > section > ul > li.treeview.active.menu-open > ul > li:nth-child(6) > a"))).click()
+    wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#app > div.row.adjust-top-6 > div > div.table-responsive.ft-scroll > table > tbody > tr:nth-child(1) > td:nth-child(7) > div"))).click()
+    print("Mudando para a página de Extrações...")
+
+    wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#app > div.row.adjust-top-6 > div > div.table-responsive.ft-scroll > table > tbody > tr:nth-child(1) > td:nth-child(7) > div"))).click()
+    wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, "#app > div.row.adjust-top-6 > div > div.table-responsive.ft-scroll > table > tbody > tr:nth-child(1) > td:nth-child(7) > div > div > a"))).click()
+    print("Processo de extração bem-sucedido. Fim da função scrap.")
+    time.sleep(60)
+
+    web.close()
 
 webscraping()
+
+from datetime import date, timedelta
+
+def semana_do_mes(data):
+    primeiro_dia = data.replace(day=1)
+    primeiro_domingo = primeiro_dia + timedelta(days=(6 - primeiro_dia.weekday()) % 7)  # Primeiro domingo do mês
+
+    if data < primeiro_domingo:
+        return 1  # Se a data for antes do primeiro domingo, está na primeira semana
+
+    return ((data - primeiro_domingo).days // 7) + 2  # Contagem de semanas
+
+# Definir a data de referência e calcular a semana anterior
+data_atual = date.today()
+semana_atual = semana_do_mes(data_atual)
+
+# Subtrair 7 dias para pegar a semana anterior - peguei do chatgpt slc mo bagulho dificil de entender vsf
+data_anterior = data_atual- timedelta(days=7)
+semana_anterior = semana_do_mes(data_anterior)
+
+print(f"Data atual: {data_atual} - Semana do mês: {semana_atual}")
+print(f"Data anterior: {data_anterior} - Semana do mês: {semana_anterior}")
+
+def filepath(caminho_antigo, caminho_novo, novo_nome, arquivo_original):
+    for file in os.listdir(caminho_antigo):
+        if file.startswith(oldName):
+            oldPath = os.path.join(caminho_antigo, file)
+            newPath = os.path.join(caminho_novo, novo_nome)
+            originalPath = os.path.join(caminho_novo, arquivo_original)
+
+            # renomeia os bang ai
+            os.rename(oldPath, newPath)
+
+            if os.path.exists(newPath):
+                df_existente = pd.read_excel(originalPath, engine='openpyxl')
+            else:
+                df_existente = pd.DataFrame() # cria um df vazio
+            print(df_existente.head())
+
+            df_novo = pd.read_excel(newPath, engine='openpyxl')
+            data_ref = semana_anterior
+            df_novo.loc[:, df_existente.columns[-1]] = data_ref
+
+            df_final = pd.concat([ df_novo, df_existente], ignore_index=True)
+
+            df_final.to_excel(originalPath, index=False, engine='openpyxl')
+
+filepath(download_path, final_path, newName, originalName)
