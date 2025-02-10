@@ -37,8 +37,8 @@ def webscraping():
     # login e senha
     wait = WebDriverWait(web, 100)
     email = wait.until(EC.element_to_be_clickable((By.CSS_SELECTOR, '[name="email"]')))
-    email.send_keys('mary.castro@benvista.com.br')
-    web.find_element(By.CSS_SELECTOR, '[name="password"]').send_keys('Ma@2805203')
+    email.send_keys('mary.castro@.com.br')
+    web.find_element(By.CSS_SELECTOR, '[name="password"]').send_keys('Ma@')
     web.find_element(By.CSS_SELECTOR, '#q-app > div > div > div.fullscreen.form-signin > div.login-card.q-card > div.card-form.q-card__section.q-card__section--vert.sz-card-section.bg-white > form > button > span.q-btn__wrapper.col.row.q-anchor--skip > span').click()
 
     ####### ACIMA OK
